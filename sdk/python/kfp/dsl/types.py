@@ -23,6 +23,11 @@ class BaseType:
 		'''to_dict serializes the type instance into a python dictionary or string'''
 		return {type(self).__name__: self.__dict__} if self.__dict__ else type(self).__name__
 
+class ListAggregator:
+	def __init__(self):
+		self.openapi_schema_validator = {
+			"type": "ListAggregator"
+		}
 
 # Primitive Types
 class Integer(BaseType):
@@ -139,6 +144,8 @@ def check_types(checked_type, expected_type):
 		checked_type (BaseType/str/dict): it describes a type from the upstream component output
 		expected_type (BaseType/str/dict): it describes a type from the downstream component input
 		'''
+	if expected_type == "ListAggregator":
+		return True
 	if isinstance(checked_type, BaseType):
 		checked_type = checked_type.to_dict()
 	if isinstance(checked_type, str):
@@ -195,3 +202,5 @@ def _check_dict_types(checked_type, expected_type):
 						str(expected_type[type_name][type_property]))
 			return False
 	return True
+
+

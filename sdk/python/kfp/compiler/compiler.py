@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import copy
 import datetime
 import json
 from collections import defaultdict
@@ -33,6 +34,31 @@ from ..components.structures import InputSpec
 from ..components._yaml_utils import dump_yaml
 from ..dsl._metadata import _extract_pipeline_metadata
 from ..dsl._ops_group import OpsGroup
+
+def get_all_task_parameters(workflow):
+  templates = workflow['spec']['templates']
+
+  # dag_templates = [template for template in workflow['spec']['templates'] if 'dag' in template]
+  # dag_tasks = [ template['dag']['tasks'] for template in dag_templates]
+  # tasks = [task for template in dag_templates for task in template['dag']['tasks']]
+  # all_parameters_in_tasks = [argument for task in all_dag_tasks if 'arguments' in task and 'parameters' in task['arguments']]
+  for template in templates:
+    if 'dag' in template:
+      for task in template['dag']['tasks']:
+        if 'arguments' in task and 'parameters' in task['arguments']:
+          for parameter in task['arguments']['parameters']:
+            yield parameter
+
+
+
+
+def fix_for_loop_parameter_pointers(workflow):
+  workflow = copy.deepcopy(workflow)
+  for task_parameter in get_all_task_parameters(workflow):
+    if task_parameter['value'].startswith("{{tasks.for-loop-for-loop"):
+      task_parameter['value'] = task_parameter['value'].rsplit(".", 1)[0] + "}}"
+  return workflow
+
 
 
 class Compiler(object):
@@ -850,6 +876,8 @@ class Compiler(object):
 
     from ._data_passing_rewriter import fix_big_data_passing
     workflow = fix_big_data_passing(workflow)
+
+    workflow = fix_for_loop_parameter_pointers(workflow)
 
     if pipeline_conf and pipeline_conf.data_passing_method != None:
       workflow = pipeline_conf.data_passing_method(workflow)
